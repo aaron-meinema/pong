@@ -1,8 +1,4 @@
-; Memory mapping data
-; 0 - 200 used for sprites
-
-; 300 - 400 used for controller input
-
+;TODO: write good documentation with nice format
 ;============================================================================
 ; Includes
 ;============================================================================
@@ -255,7 +251,7 @@ _clr:
     rts
 
 NewFrameRender:
-;TODO: create a dma to do frame rendering for objects    
+;TODO: create a dma to do frame rendering for sprites
     lda $0000
     sta $2104
     lda $0001
@@ -313,42 +309,51 @@ ControllerOne:
     stz $0421          ; reset to 0
 +
     rts
-    
-BallControll:
-;    and #%00000001
-;    beq +
-;    rti
-;+
-;    and #%00000010
-;    beq +
-;    rti
-;+
--
-    ;lda $0400
-    ;and #%00000100
-    ;beq +++
 
-    lda $0400
-    cmp #%11000100     ; going up and left?
-    bne ++             ; if not next
-
-    lda $0004
-    cmp #$00           ; on maximum vertical left?
-    bne +              ; if not not skip the flip
- 
-    lda #%10000000
-    trb $0400          ; if on maximum left flip to right
-    jmp BallControll
-+
+FlipBall:
+    rep #$20
+    lda #$0000
+    sep #$20
     lda $0005          ; load current location on vertical of ball
     cmp #$00           ; is the maximum horizontal limit found?
     bne +              ; if not skip the flip
      
-    lda #%10000100     ; on maximum height flip direction to going down
-    sta $0400
-    jmp BallControll   ; recursive function of yourself       
+    lda #%01000000     ; on maximum height flip direction to going down
+    trb $0400          ; trb is used to clear bit
 +
+    lda $0005
+    cmp #$D4
+    bne +
+
+    lda #%01000000     ; on minimum height flip direction to going up
+    tsb $0400          ; tsb is used to set bit
++
+    lda $0004
+    cmp #$00           ; on maximum vertical left?
+    bne +              ; if not not skip the flip
+     
+    lda #%10000000
+    trb $0400          ; if on maximum left flip to right 
++
+    lda $0004
+    cmp #$F0
+    bne +
+    
+    lda #%10000000
+    tsb $0400
++
+    rep #$20
+    rts
+
+
+BallControll:
+;TODO create sequinces for different directions (---xxxxx) this one is only for 00000100
+    jsr FlipBall 
                        ; not on maximum hight or max to the left go up and left  
+    lda $0400
+    cmp #%11000100     ; going up and left?
+    bne +              ; if not next
+
     dec $0410          
     dec $0410
     dec $0410
@@ -357,7 +362,7 @@ BallControll:
     dec $0415
     jmp BallRender
 
-++
++
     lda $0400
     and #%10000000     ; going down and left?
     beq +              ; if not next
@@ -369,7 +374,7 @@ BallControll:
     inc $0415   
     inc $0415
     jmp BallRender  
-    
++    
     lda $0400
     and #%01000000     ; going down and right?
     beq +              ; if not next
@@ -390,19 +395,6 @@ BallControll:
     inc $0415   
     inc $0415
     jmp BallRender    
-;+++
-;rts
-    
-;++
-;    rts
-;    and #%00001000
-;    beq +
-;    rti
-;+
-;    and #%00010000
-;    beq +
-;    rti
-;+
 
 BallRender:
     lda $0411

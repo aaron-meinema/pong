@@ -36,7 +36,6 @@
     ldy #(\3 * 2)   ; 2 bytes for every color
     jsr DMAPalette
 .ENDM
-
 ;============================================================================
 ; LoadBlockToVRAM -- Macro that simplifies calling LoadVRAM to copy data to VRAM
 ;----------------------------------------------------------------------------
@@ -81,11 +80,11 @@ Start:
     
     jsr SpriteInit
     
+;player bat sprite
     lda #(256 - 250)
     sta $0000       ; sprite x coordination
 
-    ;lda #(224/2 -16)
-    lda #30
+    lda #(224/2 -16) 
     sta $0001       ; sprite y coordination
 
     stz $0002
@@ -93,21 +92,41 @@ Start:
     lda #%01110000
     sta $0003
     
-    lda #%01010100
+    lda #%01010000
     sta $0200
-
+   
     
+;ball sprite    
+    lda #(256/2 -16)
+    sta $0004       ; sprite x coordination
+
+    lda #(224/2 -16) 
+    sta $0005       ; sprite y coordination
+
+    lda #$0B
+    sta $0006
+
+    lda #%01110000
+    sta $0007
+   
    
     ; Setup Video modes and other stuff, then turn on the screen
     jsr SetupVideo
 
-    lda #$80
+    lda #$81
     sta $4200       ; enable nmi
 
-    lda #$81
+    lda #$80
     sta $4212       ; poll controller on vblank
+    
+    ;ball start speed
+    lda #%11000100
+    sta $0400
 
 Infinity:
+    rep #$30
+    jsr BallControll
+    jsr ControllerOne
     jmp Infinity    ; bwa hahahahaha
 
 
@@ -124,8 +143,8 @@ SetupVideo:
     rep #$10
     sep #$20
     
-    stz $2102
-    stz $2103
+    ;stz $2102
+    ;stz $2103
     
     ;*********transfer sprite data
 
@@ -199,7 +218,7 @@ DMAPalette:
     sta $4304   ; Store data bank into DMA source bank
     sty $4305   ; Store size of data block
 
-    stz $4300  ; Set DMA Mode (byte, normal increment)
+    stz $4300   ; Set DMA Mode (byte, normal increment)
     lda #$22    ; Set destination register ($2122 - CGRAM Write)
     sta $4301
     lda #$01    ; Initiate DMA transfer
@@ -235,33 +254,126 @@ _clr:
     plp
     rts
 
-
-VBlank:
-
-    sep #$10
-    rep #$20
-
-    lda $4212
-    and #$01            
-    bne VBlank      ; if controller input is not ready do not continue
-
-    ldy #$0001      ; memory position in oam for sprite 1
-
-    lda $4219
-    sta $0300       ; record the buttons pressed
-
-    and #%00001000  ; is up pressed?
-    beq +           ; if not go to +
-
+NewFrameRender:
+;TODO: create a dma to do frame rendering for objects    
+    lda $0000
+    sta $2104
     lda $0001
-    clc
-    adc #$01
-    sta $0001      ; store position back to right ram position
-    
-    sty $2102
-    stz $2103      ; set oam write to 0001 the y of main
-    sta $2104      ; write new y coordinate to position
+    sta $2104
+    lda $0002
+    sta $2104
+    lda $0003
+    sta $2104
+    lda $0004
+    sta $2104
+    lda $0005
+    sta $2104
+
+    rts
+
+ControllerOne:
+    lda $4212
+    and #$01
+    bne ControllerOne  ; if controller input is not ready do not continue
+    lda $4219
+    sta $0300          ; record the buttons pressed
+
+    and #%00001000     ; is up pressed?
+    beq +           
+    lda $0001          ; is it the sprite equal to the top of the (pong)board?
+    cmp #$00
+    beq +          
+
+    dec $0001          ; if not decrement with 2 
+    dec $0001          ; which makes the sprite go up
 +
+    lda $4219
+    and #%00000100     ; is down pressed?
+    beq +
+
+    lda $0001          ; is the sprite equal to the bottom of the (pong)board?
+    cmp #$D4
+    beq +
+    
+    inc $0001          ; if not increment with 2
+    inc $0001          ; which makes the sprite go down
++   
+    rts
+    
+BallControll:
+;    and #%00000001
+;    beq +
+;    rti
+;+
+;    and #%00000010
+;    beq +
+;    rti
+;+
+-
+    lda $0400
+    and #%00000100
+    beq +++
+
+    lda $0400
+    cmp #%11000100     ; going up and left?
+    bne ++             ; if not next
+
+    lda $0004
+    cmp #$00           ; on maximum vertical left?
+    bne +              ; if not not skip the flip
+ 
+    lda #%10000000
+    trb $0400          ; if on maximum left flip to right
+    jmp BallControll
++
+    lda $0005          ; load current location on vertical of ball
+    cmp #$00           ; is the maximum horizontal limit found?
+    bne +              ; if not skip the flip
+     
+    lda #%10000100     ; on maximum height flip direction to going down
+    sta $0400
+    jmp BallControll   ; recursive function of yourself       
++
+                       ; not on maximum hight or max to the left go up and left  
+    dec $0004          
+    dec $0005
+    rts
+
+++
+    lda $0400
+    and #%10000000     ; going down and left?
+    beq +              ; if not next
+    dec $0004
+    inc $0005
+    rts
+    
+    lda $0400
+    and #%01000000     ; going down and right?
+    beq +              ; if not next
+    inc $0004
+    dec $0005
+    rts
++                      ; that leaves going down right
+    inc $0004
+    inc $0005
+    rts
++++
+    
+;++
+;    rts
+;    and #%00001000
+;    beq +
+;    rti
+;+
+;    and #%00010000
+;    beq +
+;    rti
+;+
+rts
+ 
+VBlank:
+    rep #$30 
+    jsr NewFrameRender
     rti
 
 .ENDS    

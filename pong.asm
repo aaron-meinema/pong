@@ -284,8 +284,9 @@ ControllerOne:
     cmp #$00
     beq +          
 
-    dec $0001          ; if not decrement with 2 
-    dec $0001          ; which makes the sprite go up
+    dec $0420          ; if not decrement 3 times
+    dec $0420
+    dec $0420
 +
     lda $4219
     and #%00000100     ; is down pressed?
@@ -294,10 +295,23 @@ ControllerOne:
     lda $0001          ; is the sprite equal to the bottom of the (pong)board?
     cmp #$D4
     beq +
-    
-    inc $0001          ; if not increment with 2
-    inc $0001          ; which makes the sprite go down
+   
+    inc $0420          ; if not increment 3 times
+    inc $0420
+    inc $0420
 +   
+    lda $0421          ; 
+    cmp #$02           ; this is true if FF +1 happends to 0420 
+    bne +
+    inc $0001          ; go down by one
+    stz $0421          ; reset to 0
++
+    lda $0421
+    cmp #$FE           ; this is true if 0420 = 0 and then -1
+    bne +
+    dec $0001          ; go up by one
+    stz $0421          ; reset to 0
++
     rts
     
 BallControll:
@@ -310,9 +324,9 @@ BallControll:
 ;    rti
 ;+
 -
-    lda $0400
-    and #%00000100
-    beq +++
+    ;lda $0400
+    ;and #%00000100
+    ;beq +++
 
     lda $0400
     cmp #%11000100     ; going up and left?
@@ -335,29 +349,49 @@ BallControll:
     jmp BallControll   ; recursive function of yourself       
 +
                        ; not on maximum hight or max to the left go up and left  
-    dec $0004          
-    dec $0005
-    rts
+    dec $0410          
+    dec $0410
+    dec $0410
+    dec $0415
+    dec $0415   
+    dec $0415
+    jmp BallRender
 
 ++
     lda $0400
     and #%10000000     ; going down and left?
     beq +              ; if not next
-    dec $0004
-    inc $0005
-    rts
+
+    dec $0410          
+    dec $0410
+    dec $0410
+    inc $0415
+    inc $0415   
+    inc $0415
+    jmp BallRender  
     
     lda $0400
     and #%01000000     ; going down and right?
     beq +              ; if not next
-    inc $0004
-    dec $0005
-    rts
+
+    inc $0410          
+    inc $0410
+    inc $0410
+    dec $0415
+    dec $0415   
+    dec $0415
+    jmp BallRender
+    
 +                      ; that leaves going down right
-    inc $0004
-    inc $0005
-    rts
-+++
+    inc $0410          
+    inc $0410
+    inc $0410
+    inc $0415
+    inc $0415   
+    inc $0415
+    jmp BallRender    
+;+++
+;rts
     
 ;++
 ;    rts
@@ -369,7 +403,33 @@ BallControll:
 ;    beq +
 ;    rti
 ;+
-rts
+
+BallRender:
+    lda $0411
+    cmp #$02
+    bne +
+    inc $0004
+    stz $0411
++
+    lda $0411
+    cmp #$FE
+    bne +
+    dec $0004
+    stz $0411
++
+    lda $0416
+    cmp #$02
+    bne +
+    inc $0005
+    stz $0416
++
+    lda $0416
+    cmp #$FE
+    bne +
+    dec $0005
+    stz $0416
++
+    rts
  
 VBlank:
     rep #$30 

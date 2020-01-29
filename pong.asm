@@ -1,4 +1,4 @@
-;TODO: write good documentation with nice format
+;TODO: write good documentation with nice format.
 .INCLUDE "header.inc"
 
 .INCLUDE "InitSNES.asm"
@@ -32,9 +32,14 @@ Start:
 
     ; Load Palette for our tiles
     LoadPalette SprPal, 128, 4
+    
+    ; Load Palette for background tiles
+    LoadPalette BackPal, 0, 4
+ 
+    LoadBlockToVRAM BackOne, $1000, $40         ; 2 tukes 4bpp, 8x8 = 20 hex
  
     ; Load Tile data to VRAM
-    LoadBlockToVRAM Sprites, $0000, $0800	; 2 tiles, 4bpp, 32x32 = 200(hex) = 320
+    LoadBlockToVRAM Sprites, $0000, $0800	; 2 tiles, 4bpp, 32x32 = 200(hex) = 320 wrong math i need much more (32x32 is more than 8x8)
     
     jsr SpriteInit
     
@@ -198,6 +203,7 @@ NewFrameRender:
     rts
 
 ControllerOne:
+
     lda $4212
     and #$01
     bne ControllerOne  ; if controller input is not ready do not continue
@@ -237,6 +243,12 @@ ControllerOne:
     bne +
     dec $0001          ; go up by one
     stz $0421          ; reset to 0
++
+    lda $4219
+    cmp #$00
+    bne +
+    stz $0420
+    stz $0421
 +
     rts
 
@@ -280,6 +292,7 @@ FlipBall:
 BallControll:
 ;TODO create sequinces for different directions (---xxxxx) this one is only for 00000100
     jsr FlipBall 
+   
                        ; not on maximum hight or max to the left go up and left  
     lda $0400
     cmp #%11000100     ; going up and left?
@@ -376,5 +389,9 @@ SprPal:
     .INCBIN "pong.clr"
 Sprites:
     .INCBIN "pong.pic"
+BackOne:
+    .INCBIN "back1.pic"
+BackPal:
+    .INCBIN "back1.clr"
 .ENDS
     

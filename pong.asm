@@ -1,29 +1,8 @@
 ;TODO: write good documentation with nice format
-;============================================================================
-; Includes
-;============================================================================
-
-;== Include MemoryMap, Vector Table, and HeaderInfo ==
 .INCLUDE "header.inc"
 
-;== Include SNES Initialization routines ==
 .INCLUDE "InitSNES.asm"
 
-;============================================================================
-; Macros
-;============================================================================
-;============================================================================
-;LoadPalette - Macro that loads palette information into CGRAM
-;----------------------------------------------------------------------------
-; In: SRC_ADDR -- 24 bit address of source data, 
-;     START -- Color # to start on, 
-;     SIZE -- # of COLORS to copy
-;---------------------------------------------------------------------------- 
-; Out: None
-;----------------------------------------------------------------------------
-; Modifies: A,X
-; Requires: mem/A = 8 bit, X/Y = 16 bit
-;----------------------------------------------------------------------------
 .MACRO LoadPalette
     lda #\2
     sta $2121       ; Start at START color
@@ -32,20 +11,8 @@
     ldy #(\3 * 2)   ; 2 bytes for every color
     jsr DMAPalette
 .ENDM
-;============================================================================
-; LoadBlockToVRAM -- Macro that simplifies calling LoadVRAM to copy data to VRAM
-;----------------------------------------------------------------------------
-; In: SRC_ADDR -- 24 bit address of source data
-;     DEST -- VRAM address to write to (WORD address!!)
-;     SIZE -- number of BYTEs to copy
-;----------------------------------------------------------------------------
-; Out: None
-;----------------------------------------------------------------------------
-; Modifies: A, X, Y
-;----------------------------------------------------------------------------
 
-;LoadBlockToVRAM SRC_ADDRESS, DEST, SIZE
-;   requires:  mem/A = 8 bit, X/Y = 16 bit
+
 .MACRO LoadBlockToVRAM
     ldx #\2         ; DEST
     stx $2116       ; $2116: Word address for accessing VRAM.
@@ -55,11 +22,6 @@
     jsr LoadVRAM
 .ENDM
 
-
-
-;============================================================================
-; Main Code
-;============================================================================
 
 .BANK 0 SLOT 0
 .ORG 0
@@ -72,12 +34,12 @@ Start:
     LoadPalette SprPal, 128, 4
  
     ; Load Tile data to VRAM
-    LoadBlockToVRAM Sprites, $0000, $0200	; 2 tiles, 4bpp, 32x32 = 200(hex) = 320
+    LoadBlockToVRAM Sprites, $0000, $0800	; 2 tiles, 4bpp, 32x32 = 200(hex) = 320
     
     jsr SpriteInit
     
 ;player bat sprite
-    lda #(256 - 250)
+    lda #(256 - 255)
     sta $0000       ; sprite x coordination
 
     lda #(224/2 -16) 
@@ -99,7 +61,7 @@ Start:
     lda #(224/2 -16) 
     sta $0005       ; sprite y coordination
 
-    lda #$0B
+    lda #$04
     sta $0006
 
     lda #%01110000
@@ -126,13 +88,6 @@ Infinity:
     jmp Infinity    ; bwa hahahahaha
 
 
-;============================================================================
-; SetupVideo -- Sets up the video mode and tile-related registers
-;----------------------------------------------------------------------------
-; In: None
-;----------------------------------------------------------------------------
-; Out: None
-;----------------------------------------------------------------------------
 SetupVideo:
     php
     
@@ -170,20 +125,6 @@ SetupVideo:
     plp
     rts
 
-;============================================================================
-
-;============================================================================
-; LoadVRAM -- Load data into VRAM
-;----------------------------------------------------------------------------
-; In: A:X  -- points to the data
-;     Y     -- Number of bytes to copy (0 to 65535)  (assumes 16-bit index)
-;----------------------------------------------------------------------------
-; Out: None
-;----------------------------------------------------------------------------
-; Modifies: none
-;----------------------------------------------------------------------------
-; Notes:  Assumes VRAM address has been previously set!!
-;----------------------------------------------------------------------------
 LoadVRAM:
     stx $4302   ; Store Data offset into DMA source offset
     sta $4304   ; Store data Bank into DMA source bank
@@ -197,18 +138,7 @@ LoadVRAM:
     sta $420B
 
     rts         ; return
-;============================================================================
 
-;============================================================================
-; DMAPalette -- Load entire palette using DMA
-;----------------------------------------------------------------------------
-; In: A:X  -- points to the data
-;      Y   -- Size of data
-;----------------------------------------------------------------------------
-; Out: None
-;----------------------------------------------------------------------------
-; Modifies: none
-;----------------------------------------------------------------------------
 DMAPalette:
     stx $4302   ; Store data offset into DMA source offset
     sta $4304   ; Store data bank into DMA source bank
@@ -314,6 +244,7 @@ FlipBall:
     rep #$20
     lda #$0000
     sep #$20
+    
     lda $0005          ; load current location on vertical of ball
     cmp #$00           ; is the maximum horizontal limit found?
     bne +              ; if not skip the flip
@@ -335,14 +266,14 @@ FlipBall:
     lda #%10000000
     trb $0400          ; if on maximum left flip to right 
 +
-    lda $0004
-    cmp #$F0
-    bne +
+    lda $0004          ; on maximum vertical right?
+    cmp #$F0           
+    bne +              ; if not skip the flip
     
-    lda #%10000000
+    lda #%10000000     ; if on maximum right flip to left
     tsb $0400
 +
-    rep #$20
+    rep #$20           ; back to 16 bit a
     rts
 
 
@@ -396,30 +327,33 @@ BallControll:
     inc $0415
     jmp BallRender    
 
+
 BallRender:
-    lda $0411
-    cmp #$02
-    bne +
-    inc $0004
-    stz $0411
+    lda $0411         ; if $0410 goes over FF $0411 will go up with 1
+    cmp #$02          ; check if $0411 is 2
+    bne +             ; if not skip
+    inc $0004         ; if move ball one left
+    stz $0411         ; reset $0411
 +
-    lda $0411
-    cmp #$FE
-    bne +
-    dec $0004
-    stz $0411
+    lda $0411         
+    cmp #$FE          ; check if $0411 is FE (-2)
+    bne +             ; if not skip
+    dec $0004         ; if move ball one right
+    stz $0411         ; reset $0411
 +
-    lda $0416
-    cmp #$02
-    bne +
-    inc $0005
-    stz $0416
+    lda $0416         ; if $0415 goes over FF $0416 will go up with 1
+    cmp #$02          ; check if 0416 is 2
+    bne +             ; if not skip
+
+    inc $0005         ; if ball move down
+    stz $0416         ; reset $0416
 +
-    lda $0416
-    cmp #$FE
-    bne +
-    dec $0005
-    stz $0416
+    lda $0416         
+    cmp #$FE          ; check if $0416 is FE (-2)
+    bne +             ; if not skip
+
+    dec $0005         ; if ball move up
+    stz $0416         ; reset $0416
 +
     rts
  

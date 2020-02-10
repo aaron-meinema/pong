@@ -100,13 +100,13 @@ SetupBGOne:
     ldx #$0480     ;ram location 800(starting thus tile0 of bg1) plus 4 lines 
     stx $2116
     .rept 32
-        ldx #$0002 ; one line
+        ldx #$0002 ; one line complete from left to right
         stx $2118 
     .endr
     ldx #$06E0     ; 20 lines down to make a centered field
     stx $2116
     .rept 32
-        ldx #$0002 ;again one line
+        ldx #$0002 ;again one line complete from left to right
         stx $2118
     .endr
     rts    

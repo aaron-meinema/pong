@@ -95,23 +95,21 @@ Infinity:
     jmp Infinity    ; bwa hahahahaha
 
 SetupBGOne:   
-    lda #$80
+    lda #$80       ;increment on 2119 (16 bit writes)
     sta $2115
-    ldx #$0400
+    ldx #$0480     ;ram location 800(starting thus tile0 of bg1) plus 4 lines 
     stx $2116
-    ldx #$0000
-    stx $2118
-    ldx #$0001
-    stx $2118
-    ldx #$0002
-    stx $2118
-    ldx #$0003
-    stx $2118
-    ldx #$0004
-    stx $2118
-    ldx #$0005
-    stx $2118
-    rts
+    .rept 32
+        ldx #$0002 ; one line
+        stx $2118 
+    .endr
+    ldx #$06E0     ; 20 lines down to make a centered field
+    stx $2116
+    .rept 32
+        ldx #$0002 ;again one line
+        stx $2118
+    .endr
+    rts    
 
 SetupVideo:
     php
@@ -122,7 +120,7 @@ SetupVideo:
     stz $2105
     lda #%00000100          ; background 1 = 32x32 in size and starts at 2k
     sta $2107
-    lda #$02
+    lda #$01
     sta $210b
     
     ;*********transfer sprite data
@@ -273,7 +271,7 @@ ControllerOne:
     stz $0421          ; store 0 into $0421 to prevent bugmode
 +
     rts
-
+;TODO fix issue where ram becomes x5, possibly hardcode the flips for all flips :(
 FlipBall:
     rep #$20
     lda #$0000         ; going into 8 bit mode 

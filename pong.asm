@@ -100,10 +100,10 @@ SetupBGOne:
     ldx #$0480     ;ram location 800(starting thus tile0 of bg1) plus 4 lines 
     stx $2116
     .rept 32
-        ldx #$0002 ; one line complete from left to right
+        ldx #$0002 ;one line complete from left to right
         stx $2118 
     .endr
-    ldx #$06E0     ; 20 lines down to make a centered field
+    ldx #$06E0     ;20 lines down to make a centered field
     stx $2116
     .rept 32
         ldx #$0002 ;again one line complete from left to right
@@ -125,21 +125,21 @@ SetupVideo:
     
     ;*********transfer sprite data
 
-	stz $2102		; set OAM address to 0
-	stz $2103
+    stz $2102		; set OAM address to 0
+    stz $2103
 
-	LDY #$0400
-	STY $4300		; CPU -> PPU, auto increment, write 1 reg, $2104 (OAM Write)
-	stz $4302
-	stz $4303		; source offset
-	LDY #$0220
-	STY $4305		; number of bytes to transfer
-	LDA #$7E
-	STA $4304		; bank address = $7E  (work RAM)
-	LDA #$01
-	STA $420B		;start DMA transfer
+    LDY #$0400
+    STY $4300		; CPU -> PPU, auto increment, write 1 reg, $2104 (OAM Write)
+    stz $4302
+    stz $4303		; source offset
+    LDY #$0220
+    STY $4305		; number of bytes to transfer
+    LDA #$7E
+    STA $4304		; bank address = $7E  (work RAM)
+    LDA #$01
+    STA $420B		;start DMA transfer
 	
-	lda #%10100000
+    lda #%10100000
     sta $2101
 
     lda #%00010001            ; Enable BG1 and sprites
@@ -278,27 +278,27 @@ FlipBall:
     sep #$20
     
     lda $0005          ; load current location on vertical of ball
-    cmp #$00           ; is the maximum horizontal limit found?
+    cmp #$17           ; is the maximum vertical limit found?
     bne +              ; if not skip the flip
      
     lda #%01000000     ; on maximum height flip direction to going down
     trb $0400          ; trb is used to clear bit
 +
     lda $0005
-    cmp #$D4
+    cmp #$A7
     bne +
 
     lda #%01000000     ; on minimum height flip direction to going up
     tsb $0400          ; tsb is used to set bit
 +
     lda $0004
-    cmp #$00           ; on maximum vertical left?
+    cmp #$00           ; on maximum horizontal left?
     bne +              ; if not not skip the flip
      
     lda #%10000000
     trb $0400          ; if on maximum left flip to right 
 +
-    lda $0004          ; on maximum vertical right?
+    lda $0004          ; on maximum horizontal right?
     cmp #$F0           
     bne +              ; if not skip the flip
     

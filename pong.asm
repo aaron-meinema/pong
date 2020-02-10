@@ -74,7 +74,9 @@ Start:
    
    
     ; Setup Video modes and other stuff, then turn on the screen
+    jsr SetupBGOne
     jsr SetupVideo
+    
 
     lda #$81
     sta $4200       ; enable nmi
@@ -82,7 +84,7 @@ Start:
     lda #$80
     sta $4212       ; poll controller on vblank
     
-    ;ball start speed
+    ; Ball start direction
     lda #%11000100
     sta $0400
 
@@ -92,15 +94,36 @@ Infinity:
     jsr ControllerOne
     jmp Infinity    ; bwa hahahahaha
 
+SetupBGOne:   
+    lda #$80
+    sta $2115
+    ldx #$0400
+    stx $2116
+    ldx #$0000
+    stx $2118
+    ldx #$0001
+    stx $2118
+    ldx #$0002
+    stx $2118
+    ldx #$0003
+    stx $2118
+    ldx #$0004
+    stx $2118
+    ldx #$0005
+    stx $2118
+    rts
 
 SetupVideo:
     php
     
     rep #$10
     sep #$20
-    
-    ;stz $2102
-    ;stz $2103
+    stz $2105               ; backgrounds to 8x8 mode 
+    stz $2105
+    lda #%00000100          ; background 1 = 32x32 in size and starts at 2k
+    sta $2107
+    lda #$02
+    sta $210b
     
     ;*********transfer sprite data
 
@@ -121,7 +144,7 @@ SetupVideo:
 	lda #%10100000
     sta $2101
 
-    lda #%00010000            ; Enable BG1
+    lda #%00010001            ; Enable BG1 and sprites
     sta $212C
     
     lda #$0F
@@ -186,19 +209,17 @@ _clr:
     rts
 
 NewFrameRender:
-;TODO: create a dma to do frame rendering for sprites
-    lda $0000
-    sta $2104
-    lda $0001
-    sta $2104
-    lda $0002
-    sta $2104
-    lda $0003
-    sta $2104
-    lda $0004
-    sta $2104
-    lda $0005
-    sta $2104
+
+    LDY #$0400
+    STY $4300		; CPU -> PPU, auto increment, write 1 reg, $2104 (OAM Write)
+    stz $4302
+    stz $4303		; source offset
+    LDY #$0220
+    STY $4305		; number of bytes to transfer
+    LDA #$7E
+    STA $4304		; bank address = $7E  (work RAM)
+    LDA #$01
+    STA $420B		;start DMA transfer
 
     rts
 
@@ -245,16 +266,17 @@ ControllerOne:
     stz $0421          ; reset to 0
 +
     lda $4219
-    cmp #$00
-    bne +
-    stz $0420
-    stz $0421
+    cmp #$00           ; check if no buttons are pressed
+    bne +              ; if not skip
+
+    stz $0420          ; store 0 into $0420 to prevent bugmode
+    stz $0421          ; store 0 into $0421 to prevent bugmode
 +
     rts
 
 FlipBall:
     rep #$20
-    lda #$0000
+    lda #$0000         ; going into 8 bit mode 
     sep #$20
     
     lda $0005          ; load current location on vertical of ball
